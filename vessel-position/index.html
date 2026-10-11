@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Generator Vessel Position - PT BAg</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/responsive.css">
+</head>
+<body>
+<header>
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true">BAg</div>
+    <div><div class="eyebrow">PT BAg · Coal Shipment</div><h1>Vessel Position</h1><p>Generator posisi kapal Tanjung Jati B.</p></div>
+  </div>
+  <div class="header-badges"><span class="badge">Berjalan offline</span><span class="badge">Satu file HTML</span></div>
+</header>
+<main>
+  <section class="panel editor" aria-labelledby="input-title">
+    <div class="panel-heading"><span class="step">01</span><div><h2 id="input-title">Laporan kapal</h2><p class="subheading">Tempel laporan lengkap.</p></div></div>
+    <details class="help">
+      <summary>Cara menggunakan</summary>
+      <ol><li>Ganti contoh dengan laporan lengkap.</li><li>Jam snapshot boleh dikosongkan agar mengikuti laporan.</li><li>Periksa hasil dan catatan, lalu pilih <strong>Unduh PNG</strong>.</li></ol>
+      <p>Snapshot adalah jam posisi kapal. ETA/ETD adalah perkiraan.</p>
+    </details>
+    <label for="txt">Update Vessel Line Up TJB</label>
+    <textarea id="txt" spellcheck="false" placeholder="Tempel laporan kapal di sini…"></textarea>
+    <label for="tm">Jam snapshot <span class="optional">· opsional</span></label>
+    <input type="text" id="tm" placeholder="Contoh 08:00" aria-describedby="time-hint">
+    <p class="hint" id="time-hint">Kosong = jam laporan. Format HH:MM (LT).</p>
+    <div class="actions"><button id="btnGen">Buat gambar</button><button id="btnPng" class="sec">Unduh PNG</button><button id="btnSample" class="ghost">Gunakan contoh laporan</button></div>
+    <p class="hint editor-note">Hasil diperbarui otomatis. Estimasi tidak dianggap kejadian aktual.</p>
+  </section>
+  <section class="panel output" aria-labelledby="output-title">
+    <div class="preview-heading"><div class="panel-heading" style="margin:0"><span class="step">02</span><div><h2 id="output-title">Peta posisi kapal</h2><p class="subheading">Pratinjau hasil PNG.</p></div></div><div class="preview-tools"><span class="live-label">Otomatis</span></div></div>
+    <div class="metrics" aria-live="polite"><div class="metric"><span class="metric-label">Kapal terbaca</span><strong id="shipCount">—</strong></div><div class="metric"><span class="metric-label">Catatan laporan</span><strong id="noteCount">—</strong></div><div class="metric"><span class="metric-label">Snapshot · LT</span><strong id="snapshotLabel">—</strong></div></div>
+    <p class="map-help">Gulir dengan mouse atau geser di HP untuk melihat gambar. Unduhan PNG beresolusi HD.</p>
+    <div class="preview-wrap" id="mapCanvas" tabindex="0" aria-label="Pratinjau peta kapal. Gulir atau geser untuk melihat seluruh gambar."><div id="preview"></div></div>
+    <details class="details" open><summary>Detail kapal &amp; catatan</summary><div id="log"></div></details>
+  </section>
+</main>
+<footer class="page-footer"><span>PT BAg Coal Shipment · Tanjung Jati B</span><span>Offline · Satu file HTML</span></footer>
+<script defer src="js/config.js"></script>
+<script defer src="js/utils.js"></script>
+<script defer src="js/parser.js"></script>
+<script defer src="js/vessel-status.js"></script>
+<script defer src="js/layout.js"></script>
+<script defer src="js/renderer.js"></script>
+<script defer src="js/export-png.js"></script>
+<script defer src="js/sample-report.js"></script>
+<script defer src="js/app.js"></script>
+</body>
+</html>

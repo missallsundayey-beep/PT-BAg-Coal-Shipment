@@ -1,0 +1,47 @@
+[
+  {
+    "name": "complete-loading-before-departure",
+    "text": "*06 Oktober 2026 @ 07:00 LT*\n*JETTY 1&2*\n*MV TEST ALPHA (EBP A7-21 Laycan 20 Sep - 9 Oct 2026)*\n05:00 LT / 05th : TA Muara Berau\n06:00 LT / 05th : Commence Loading\n06:00 LT / 06th : Complete Loading\n09:00 LT / 06th : TD Muara Berau\n08:00 LT / 08th : ETA Tanjung Jati",
+    "time": ""
+  },
+  {
+    "name": "drop-anchor-after-discharge",
+    "text": "*06 Oktober 2026 @ 07:00 LT*\n*JETTY 1&2*\n*MV TEST ALPHA (EBP A7-21 Laycan 20 Sep - 9 Oct 2026)*\n05:00 LT / 05th : TA Tanjung Jati\n06:00 LT / 05th : Commence Disch\n04:00 LT / 06th : Complete Disch\n06:00 LT / 06th : Drop Anchor",
+    "time": ""
+  },
+  {
+    "name": "shifting-before-allfast",
+    "text": "*06 Oktober 2026 @ 07:00 LT*\n*JETTY 1&2*\n*MV TEST ALPHA (EBP A7-21 Laycan 20 Sep - 9 Oct 2026)*\n05:00 LT / 05th : TA Tanjung Jati\n06:00 LT / 05th : All Fast at Jetty 1&2\n06:00 LT / 06th : POB Shifting to Jetty 3&4\n08:00 LT / 06th : All Fast at Jetty 3&4",
+    "time": "07:00"
+  },
+  {
+    "name": "shifting-after-allfast",
+    "text": "*06 Oktober 2026 @ 07:00 LT*\n*JETTY 1&2*\n*MV TEST ALPHA (EBP A7-21 Laycan 20 Sep - 9 Oct 2026)*\n05:00 LT / 05th : TA Tanjung Jati\n06:00 LT / 05th : All Fast at Jetty 1&2\n06:00 LT / 06th : POB Shifting to Jetty 3&4\n08:00 LT / 06th : All Fast at Jetty 3&4",
+    "time": "09:00"
+  },
+  {
+    "name": "external-port",
+    "text": "*06 Oktober 2026 @ 07:00 LT*\n*JETTY 1&2*\n*MV TEST ALPHA (EBP A7-21 Laycan 20 Sep - 9 Oct 2026)*\n05:00 LT / 05th : TA Weda",
+    "time": ""
+  },
+  {
+    "name": "external-destination",
+    "text": "*06 Oktober 2026 @ 07:00 LT*\n*JETTY 1&2*\n*MV TEST ALPHA (EBP A7-21 Laycan 20 Sep - 9 Oct 2026)*\n05:00 LT / 05th : TD Tanjung Jati to Weda\n08:00 LT / 08th : ETA Weda",
+    "time": ""
+  },
+  {
+    "name": "same-jetty-queue",
+    "text": "*06 Oktober 2026 @ 07:00 LT*\n*JETTY 1&2*\n*MV TEST ALPHA (EBP A7-21 Laycan 20 Sep - 9 Oct 2026)*\n05:00 LT / 05th : TD Muara Berau\n08:00 LT / 08th : ETA Tanjung Jati\nMV TEST BETA (KPC B3-29 Laycan 4 - 13 Oct 2026)\n05:00 LT / 05th : TD Tanjung Bara\n08:00 LT / 07th : ETA Tanjung Jati",
+    "time": ""
+  },
+  {
+    "name": "parser-variations",
+    "text": "*06 Oktober 2026 @ 07:00 LT*\n*JETTY 1&2*\n*MV. TEST ALPHA (EBP A7-21 Laycan 20 Sep - 9 Oct 2026)*\n05.00 LT / 05th ; TA Muara Berau\n06:00 LT / 05th : CmL\nPm / 09th : Estimated Complete Loading",
+    "time": ""
+  },
+  {
+    "name": "year-boundary",
+    "text": "*06 Januari 2027 @ 07:00 LT*\n*JETTY 1&2*\n*MV TEST ALPHA (EBP A7-21 Laycan 20 Sep - 9 Oct 2026)*\n05:00 LT / 30th : TD Tanjung Jati\n08:00 LT / 02nd : TA Bontang\n09:00 LT / 02nd : CmL",
+    "time": ""
+  }
+]

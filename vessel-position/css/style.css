@@ -1,0 +1,42 @@
+:root{color-scheme:light;--ink:#002E6D;--muted:#002E6D;--line:rgba(0,46,109,.14);--navy:#002E6D;--accent:#FFD200;--paper:#fff}
+  *{box-sizing:border-box}
+  body{margin:0;background:rgba(0,46,109,.035);color:var(--ink);font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5}
+  button,input,textarea{font:inherit}
+  header{background:var(--navy);color:#fff;padding:28px max(24px,calc((100vw - 1660px)/2));border-bottom:4px solid #FFD200;display:flex;align-items:center;justify-content:space-between;gap:24px}
+  .brand{display:flex;align-items:center;gap:16px}.brand-mark{width:52px;height:52px;flex-shrink:0;background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.22);border-radius:14px;display:grid;place-items:center}
+  .eyebrow{font-size:11px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase;color:#FFD200;margin-bottom:4px}
+  header h1{margin:0;font-size:28px;letter-spacing:-.7px;line-height:1.2}header p{margin:8px 0 0;color:#FFFFFF;font-size:13px}
+  .header-badges{display:flex;gap:8px;flex-wrap:wrap}.badge{font-size:11px;white-space:nowrap;border:1px solid rgba(255,255,255,.3);border-radius:30px;padding:6px 11px;color:#FFFFFF}
+  main{max-width:1708px;margin:0 auto;display:grid;grid-template-columns:minmax(300px,370px) minmax(0,1fr);gap:24px;padding:28px 24px;align-items:start}
+  .panel{background:var(--paper);border:1px solid var(--line);border-radius:16px;box-shadow:0 4px 18px rgba(0,46,109,.04);overflow:hidden}
+  .editor{padding:24px;position:sticky;top:20px}.panel-heading{display:flex;align-items:center;gap:10px;margin-bottom:20px}.step{display:grid;place-items:center;width:30px;height:30px;border-radius:9px;background:rgba(255,210,0,.14);color:var(--accent);font-size:12px;font-weight:700;flex-shrink:0}
+  h2{margin:0;font-size:17px;letter-spacing:-.3px}.subheading{margin:2px 0 0;font-size:12px;color:var(--muted)}
+  label{display:block;font-size:12px;font-weight:700;margin:18px 0 8px;color:#002E6D}.optional{font-weight:400;color:var(--muted)}
+  textarea{display:block;width:100%;height:420px;border:1px solid rgba(0,46,109,.14);border-radius:10px;padding:14px;background:rgba(0,46,109,.035);color:#002E6D;resize:vertical;font:12px/1.7 Consolas,'Courier New',monospace;tab-size:2}
+  input[type=text]{width:100%;height:42px;border:1px solid rgba(0,46,109,.14);border-radius:10px;padding:9px 12px;background:rgba(0,46,109,.035);color:var(--ink)}
+  textarea:focus,input:focus{outline:3px solid rgba(255,210,0,.4);border-color:#002E6D}
+  .hint{font-size:11px;color:var(--muted);margin:8px 0 0;line-height:1.65}.editor-note{border-top:1px solid var(--line);padding-top:15px;margin-top:18px}
+  .actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:20px}
+  button{border:1px solid transparent;border-radius:9px;background:var(--accent);color:#002E6D;padding:10px 12px;cursor:pointer;font-size:12px;font-weight:700;min-height:42px}
+  button:hover{background:#002E6D;color:#FFFFFF}button:focus-visible,summary:focus-visible{outline:3px solid #FFD200;outline-offset:3px}button.sec{background:rgba(0,46,109,.035);border-color:rgba(0,46,109,.14);color:#002E6D}button.sec:hover{background:rgba(0,46,109,.08)}
+  button.ghost{grid-column:1/-1;background:transparent;color:#002E6D;min-height:34px;padding:4px}button.ghost:hover{background:rgba(0,46,109,.035)}
+  .output{min-width:0}.preview-heading{padding:20px 24px;display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:1px solid var(--line)}.live-label{border-radius:30px;background:rgba(255,210,0,.14);color:#002E6D;padding:5px 10px;font-size:11px;font-weight:700;white-space:nowrap}
+  .metrics{display:grid;grid-template-columns:1fr 1fr 1.4fr;border-bottom:1px solid var(--line);background:rgba(0,46,109,.035)}.metric{padding:13px 24px;min-width:0}.metric+.metric{border-left:1px solid var(--line)}.metric-label{display:block;font-size:10px;letter-spacing:.6px;text-transform:uppercase;color:var(--muted)}.metric strong{font-size:18px;line-height:1.5}.metric:last-child strong{font-size:13px}
+  .preview-wrap{padding:20px;background:rgba(0,46,109,.035)}#preview svg{width:100%;height:auto;display:block;border:1px solid rgba(0,46,109,.14);border-radius:10px;background:#fff}
+  .details{border-top:1px solid var(--line)}summary{cursor:pointer;padding:18px 24px;font-size:13px;font-weight:700;color:#002E6D}summary:hover{background:rgba(0,46,109,.035)}#log{padding:0 24px 24px;font-size:12px;overflow-x:auto}#log table{border-collapse:separate;border-spacing:0;width:100%;border:1px solid var(--line);border-radius:9px;overflow:hidden}#log th{background:rgba(0,46,109,.035);color:#002E6D;font-size:10px;text-transform:uppercase;letter-spacing:.5px}#log td,#log th{text-align:left;padding:10px 12px;border-bottom:1px solid rgba(0,46,109,.14);vertical-align:top}#log tr:last-child td{border-bottom:0}#log tr:nth-child(even) td{background:rgba(0,46,109,.035)} .warn{color:#002E6D;background:rgba(255,210,0,.14);border:1px solid #FFD200;border-radius:8px;padding:10px 12px;margin:0 0 10px;line-height:1.6}
+  .page-footer{max-width:1660px;margin:0 auto;padding:0 24px 24px;color:#002E6D;font-size:11px;display:flex;justify-content:space-between;gap:16px}
+
+
+
+
+
+  .brand{min-width:0}.brand>div:last-child{min-width:0}
+  .brand-mark{background:#FFFFFF;border-color:#FFFFFF;color:#002E6D;font-size:17px;font-weight:800;letter-spacing:-1px}
+  .badge{color:#FFFFFF}.step{background:#FFD200;color:#002E6D}
+  .help{border:1px solid rgba(0,46,109,.12);border-radius:10px;background:rgba(255,210,0,.08);margin:0 0 18px}
+  .help summary{padding:12px 14px;font-size:12px;color:#002E6D}.help ol{margin:0;padding:0 18px 0 32px;font-size:12px;color:#002E6D}.help li{padding:0 0 8px}.help p{margin:2px 14px 14px;font-size:11px;line-height:1.65;color:#002E6D}
+  .preview-tools{display:flex;align-items:center;gap:10px;flex-shrink:0}
+  .map-help{margin:0;padding:10px 24px;font-size:11px;line-height:1.6;color:#002E6D;background:rgba(255,210,0,.08);border-bottom:1px solid rgba(0,46,109,.10)}
+  .preview-wrap{max-height:72vh;overflow:auto;overscroll-behavior:auto;-webkit-overflow-scrolling:touch;scrollbar-gutter:stable}#preview{min-width:1100px}
+  #log table{min-width:620px}#log td,#log th{overflow-wrap:anywhere}.warn{border-left:3px solid #EA232D}
+  .warn-label{font-weight:700;color:#EA232D}.metric strong{overflow-wrap:anywhere}
