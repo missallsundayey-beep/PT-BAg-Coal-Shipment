@@ -151,18 +151,20 @@ function colOf(port, warn) {
 }
 
 function tfmt(e) {
+  if (!e || e.day == null) return '—';
   const d = pad(e.day);
-  const t = e.ampm ? '/' + e.ampm + ' LT' : '/' + pad(e.hh) + '.' + pad(e.mm) + 'lt';
+  const t = e.ampm ? '/' + e.ampm + ' LT' : e.hh == null || e.mm == null ? '/—' : '/' + pad(e.hh) + '.' + pad(e.mm) + 'lt';
   return d + '<tspan dy="-9" font-size="15">' + e.suf + '</tspan><tspan dy="9">' + t + '</tspan>';
 }
 function tplain(e) {
-  return pad(e.day) + e.suf + (e.ampm ? '/' + e.ampm + ' LT' : '/' + pad(e.hh) + '.' + pad(e.mm) + 'lt');
+  if (!e || e.day == null) return '—';
+  return pad(e.day) + e.suf + (e.ampm ? '/' + e.ampm + ' LT' : e.hh == null || e.mm == null ? '/—' : '/' + pad(e.hh) + '.' + pad(e.mm) + 'lt');
 }
 </script>
 <script>
 /* ============ PARSER TEKS ============ */
 // Canonical event types keep estimates separate from actual operations.
-const EST_TYPES = new Set(['ETA', 'ETD', 'EST_CML', 'EST_CL', 'EST_CMD', 'EST_CD', 'EST_CONTINUE_CD', 'EST_STOP', 'EST_STOP_LOADING', 'EST_POB', 'EST_SHIFT']);
+const EST_TYPES = new Set(['ETA', 'ETD', 'ETB', 'EST_CML', 'EST_CL', 'EST_CMD', 'EST_CD', 'EST_CONTINUE_CD', 'EST_STOP', 'EST_STOP_LOADING', 'EST_POB', 'EST_SHIFT']);
 const isEstimate = e => EST_TYPES.has(e.type);
 const portKey = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 const isJati = s => /tanjung\s*jati|t\.?\s*jati|\btjb\b/i.test(s || '');
@@ -176,6 +178,7 @@ function cleanPort(s) {
 function reportStatus(s) {
   const t = String(s || '');
   if (/drop\s*anchor/i.test(t)) return 'DROP ANCHOR';
+  if (/waiting\s+.*clearance/i.test(t)) return 'WAITING P.CLEARANCE';
   if (/sailing/i.test(t)) return 'SAILING';
   if (/complete(?:d)?\s+load/i.test(t)) return 'COMPLETE LOADING';
   if (/complete(?:d)?\s+disch/i.test(t)) return 'COMPLETE DISCHARGE';
@@ -190,8 +193,8 @@ function mentionedPort(text) {
   return m ? cleanPort(m[0]) : '';
 }
 function statusPort(s) {
-  const m = String(s || '').match(/(?:\bat\s*|\barrival\s+)(.+)$/i);
-  return m ? cleanPort(m[1].replace(/jetty\s*\d\s*[&-]\s*\d\s*/i, '')) : '';
+  const m = String(s || '').match(/(?:\bat\s*|\barriv(?:al|ed)\s+)(.+)$/i);
+  return m ? cleanPort(m[1].replace(/^(?:at|in)\s+/i, '').replace(/jetty\s*\d\s*[&-]\s*\d\s*/i, '')) : '';
 }
 function jettyIn(s) {
   const m = String(s || '').match(/jetty\s*([13])\s*(?:&|and|dan|-)\s*([24])/i);
@@ -204,9 +207,9 @@ function classify(txt) {
   if (estimated && /^POB/i.test(op)) return {type:/shifting/i.test(op) ? 'EST_SHIFT' : 'EST_POB'};
   if (/^POB\s+shifting/i.test(t)) return {type:'SHIFT'};
   if (/^POB\s+(?:ETD|TD|ET\s*Sail)/i.test(t)) return {type:'POB_ETD'};
-  if (/^(?:ETA|ETD|ET\s*Sail)\b/i.test(t)) {
-    const m = t.match(/^(ETA|ETD|ET\s*Sail)\s*(.*)/i);
-    return {type: /^ETA$/i.test(m[1]) ? 'ETA' : 'ETD', port: cleanPort(m[2])};
+  if (/^(?:ETA|ETD|ETB|ET\s*Sail)\b/i.test(t)) {
+    const m = t.match(/^(ETA|ETD|ETB|ET\s*Sail)\s*(.*)/i);
+    return {type: /^ET\s*Sail$/i.test(m[1]) ? 'ETD' : m[1].toUpperCase(), port: cleanPort(m[2])};
   }
   let type = null;
   if (/^(?:comm(?:ence)?\.?\s+loading|CmL\b)/i.test(op)) type = 'CML';
@@ -234,13 +237,13 @@ function parseReport(raw, warnings) {
     .split('\n').map(s => s.replace(/\\([*])/g, '$1').replace(/[\\*]+$/g, '').replace(/\*/g, '').trim()).filter(Boolean);
   let report = null, jetty = null, cur = null;
   const vessels = [];
-  const evRe = /^(?:(\d{1,2})\s*[:.]\s*(\d{2})\s*(?:LT)?|(AM|PM)\.?)\s*\/\s*(\d{1,2})(st|nd|rd|th)?\s*(?:[:;]\s*)?(.+)$/i;
+  const evRe = /^(?:(?:(\d{1,2})\s*[:.]\s*(\d{2})\s*(?:LT)?|(AM|PM)\.?|[—-])\s*\/\s*)?(\d{1,2})(st|nd|rd|th)?\s*(?:[:;]\s*)?(.+)$/i;
   for (const line of lines) {
     let m;
-    if (!report && (m = line.match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})\s*@?\s*(\d{1,2})[:.](\d{2})/))) {
+    if (!report && !cur && !/^MV\.?\s/i.test(line) && (m = line.match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})(?:\s*@?\s*(\d{1,2})[:.](\d{2}))?/))) {
       const month = MONTHS[m[2].toLowerCase()];
-      const d = +m[1], hh = +m[4], mm = +m[5];
-      if (month !== undefined && d >= 1 && d <= new Date(Date.UTC(+m[3], month + 1, 0)).getUTCDate() && hh < 24 && mm < 60) {
+      const d = +m[1], hh = m[4] === undefined ? null : +m[4], mm = m[5] === undefined ? null : +m[5];
+      if (month !== undefined && d >= 1 && d <= new Date(Date.UTC(+m[3], month + 1, 0)).getUTCDate() && (hh === null || hh < 24 && mm < 60)) {
         report = {y:+m[3], m:month, d, hh, mm}; continue;
       }
       warnings.push('Tanggal atau jam laporan tidak valid: ' + line);
@@ -260,37 +263,50 @@ function parseReport(raw, warnings) {
       continue;
     }
     if (!cur) continue;
-    if ((m = line.match(evRe))) {
+    if ((m = line.match(evRe)) && (m[1] !== undefined || m[3] || /^(?:[—-]\s*\/\s*)?\d{1,2}(?:st|nd|rd|th)?\s*[:;]/i.test(line))) {
       const hh = m[1] === undefined ? null : +m[1], mm = m[2] === undefined ? null : +m[2], day = +m[4];
       if (day < 1 || day > 31 || hh !== null && (hh > 23 || mm > 59)) {
         warnings.push(cur.name + ': waktu event tidak valid, diabaikan: ' + line); continue;
       }
       const event = Object.assign({hh, mm, ampm:m[3] ? m[3].toUpperCase() : null, day, suf:ord(day), raw:m[6].trim(), index:cur.events.length}, classify(m[6]));
+      if (hh === null && !m[3]) event.unknownTime = true;
       cur.events.push(event);
       if (event.type === 'OTHER') warnings.push(cur.name + ': event belum dikenali: ' + event.raw);
       continue;
     }
-    if (!cur.statusText && !cur.events.length && /^(?:\(|sailing|arrival|loading|disch|complete|berthing)/i.test(line)) {
+    if (!cur.statusText && !cur.events.length && /^(?:\(|sailing|arriv|drop\s*anchor|waiting|loading|disch|complete|berthing)/i.test(line)) {
       cur.statusText = line.replace(/^\(/, '').replace(/\)$/, '').trim(); continue;
+    }
+    const undated = classify(line);
+    if (['CML','CL','CMD','CD','EST_CL','EST_CML','EST_CMD','EST_CD'].includes(undated.type)) {
+      cur.events.push(Object.assign({hh:null,mm:null,ampm:null,day:null,suf:'',raw:line,index:cur.events.length,undated:true},undated));
+      warnings.push(cur.name + ': tanggal/jam event tidak tersedia: ' + line);
+      continue;
     }
     if (/cargo|yang diangkut/i.test(line) && line.includes(':')) { cur.cargo.push(line); continue; }
     if (/\bLT\b|\d(?:st|nd|rd|th)\s*:/i.test(line)) warnings.push(cur.name + ': baris waktu belum terbaca: ' + line);
   }
   if (!report) {
-    const n = new Date();
-    report = {y:n.getFullYear(), m:n.getMonth(), d:n.getDate(), hh:n.getHours(), mm:n.getMinutes()};
-    warnings.push('Tanggal/jam laporan tidak ditemukan; memakai waktu komputer. Periksa tanggal sebelum menggunakan hasil.');
+    report = {y:null, m:null, d:null, hh:null, mm:null};
+    warnings.push('Tanggal/jam laporan tidak ditemukan; snapshot belum tersedia. Waktu komputer tidak digunakan.');
+    for (const v of vessels) {
+      v.reportTs = NaN;
+      v.events.forEach(e => { e.ts = NaN; });
+    }
+    return {report, vessels};
   }
+  if (report.hh === null) warnings.push('Jam laporan tidak tersedia; isi jam snapshot sebelum menentukan status berdasarkan waktu.');
   for (const v of vessels) {
     // Anchor the latest dated actual event to the report month, then count
     // month boundaries backwards. Small inversions retain their real day.
-    const actual = v.events.filter(e => !isEstimate(e) && e.type !== 'OTHER' && e.day <= report.d);
-    v.reportTs = Date.UTC(report.y,report.m,report.d,report.hh,report.mm);
+    const actual = v.events.filter(e => !isEstimate(e) && e.type !== 'OTHER' && e.day !== null && e.day <= report.d);
+    v.reportTs = report.hh === null ? NaN : Date.UTC(report.y,report.m,report.d,report.hh,report.mm);
     const last = actual[actual.length - 1];
     let month = report.m;
     if (last && last.day <= report.d) {
       let rolls = 0, prev = null;
       for (const e of v.events) {
+        if (e.undated) continue;
         if (prev !== null && prev >= 25 && e.day <= 10) rolls++;
         prev = e.day;
         if (e === last) break;
@@ -299,6 +315,7 @@ function parseReport(raw, warnings) {
     } else if (v.events.length && v.events[0].day > report.d + 15) month--;
     let prev = null;
     for (const e of v.events) {
+      if (e.undated) { e.ts = NaN; continue; }
       if (prev !== null && e.day < prev) {
         if (prev >= 25 && e.day <= 10) month++;
         else warnings.push(v.name + ': tanggal event tidak berurutan; tanggal asli dipertahankan dan kronologi diurutkan berdasarkan waktu.');
@@ -309,7 +326,7 @@ function parseReport(raw, warnings) {
       // AM/PM without a precise clock is displayed as a time range. An actual
       // event becomes certain only at the end of that range.
       e.ts = Date.UTC(report.y, month, e.day, e.hh === null ? (e.ampm === 'AM' ? 11 : 23) : e.hh, e.mm === null ? 59 : e.mm);
-      if (e.hh === null && !isEstimate(e)) warnings.push(v.name + ': waktu aktual hanya ' + e.ampm + '; status memakai akhir rentang waktu tersebut.');
+      if (e.hh === null && !isEstimate(e)) warnings.push(v.name + ': waktu aktual ' + (e.ampm ? 'hanya ' + e.ampm : 'tidak tersedia') + '; status memakai akhir rentang ' + (e.ampm ? 'waktu tersebut' : 'hari tersebut') + ', bukan jam aktual yang diketahui.');
     }
     const sourceEvents = v.events.slice();
     for (const ev of sourceEvents) {
@@ -343,16 +360,40 @@ function evalVessel(v, now, warn) {
   const reported = reportStatus(v.statusText);
   const useReport = now >= v.reportTs;
   const e = actual[actual.length - 1];
-  v.rows = []; v.etaTs = Infinity; v.port = null; v.destination = null;
-  const row = (label, ev) => { if (ev) v.rows.push({label, ev}); };
+  v.rows = []; v.etaTs = Infinity; v.port = null; v.destination = null; v.orderTs = null;
+  // A placeholder is a presentation row, never an event in E or actual.
+  const row = (label, ev) => { v.rows.push({label, ev:ev || null}); };
   const latest = (events, types) => events.filter(x => types.includes(x.type)).slice(-1)[0];
   const future = types => E.find(x => Number.isFinite(x.ts) && x.ts >= (e ? e.ts : now) && types.includes(x.type));
   if (!e) {
     v.status = 'STATUS UNKNOWN'; v.band = 'external';
+    const sailing = useReport && reported === 'SAILING';
     v.port = statusPort(v.statusText) || mentionedPort(v.statusText) || mentionedPort(E.map(x => x.raw).join(' '));
     v.status = useReport && reported ? reported : 'STATUS UNKNOWN';
-    v.location = v.port || 'Lokasi tidak tercantum pada laporan';
-    warn(v.name + ': belum ada kejadian aktual yang valid pada waktu snapshot; kapal tetap ditampilkan dengan status belum diketahui.');
+    if (v.status === 'ARRIVED') v.status = 'DROP ANCHOR';
+    if (sailing) { v.destination = v.port; v.location = 'Tujuan ' + (v.port || 'tidak tercantum'); }
+    else if (useReport && v.port) {
+      if (knownColumn(v.port) >= 0) v.band = 'top';
+      else if (isJati(v.port) && v.jetty) v.band = v.status === 'DROP ANCHOR' ? 'anchored' : 'jetty';
+    }
+    if (useReport && reported) v.reportedEvidence = true;
+    if (v.band === 'anchored') { v.anchorPort = v.port; v.anchorZone = 'jetty'; v.anchorJetty = v.jetty; }
+    if (!sailing) v.location = v.port || 'Lokasi tidak tercantum pada laporan';
+    const estimate = E.find(x => x.type === (sailing || reported === 'ARRIVED' ? 'ETA' : 'ETD'));
+    if (reported === 'ARRIVED' && useReport) {
+      row(estimate ? 'ETA ' + abbr(v.port) : 'TA ' + abbr(v.port), estimate);
+      row('ETB', E.find(x => x.type === 'ETB'));
+    } else if (sailing) {
+      row('TD', null); row('ETA ' + abbr(v.destination), estimate);
+    } else if (useReport && reported === 'COMPLETE LOADING') {
+      row('CL', E.find(x => x.type === 'CL')); row('ETD', estimate);
+    } else if (useReport && reported === 'LOADING') {
+      row('CmL', null); row('ECL', E.find(x => x.type === 'EST_CL'));
+    }
+    completeVesselRows(v);
+    warn(v.name + (useReport && reported
+      ? ': status/lokasi mengikuti ringkasan laporan; jam kejadian aktual belum tersedia. ETA tetap merupakan perkiraan.'
+      : ': belum ada kejadian aktual yang valid pada waktu snapshot; kapal tetap ditampilkan dengan status belum diketahui.'));
     return;
   }
   // Start a new visit at each arrival/departure. Operations and pilot events
@@ -384,15 +425,15 @@ function evalVessel(v, now, warn) {
       const hinted = v.statusText.match(/sailing\s+to\s+(.+)/i);
       v.destination = e.destination || (arrival && arrival.port) || (hinted ? cleanPort(hinted[1]) : null);
       v.status = 'SAILING'; row('TD ' + abbr(e.port), e);
-      row('ETA ' + abbr(v.destination), arrival);
+      row((arrival && arrival.type === 'TA' ? 'TA ' : 'ETA ') + abbr(v.destination), arrival);
       v.port = v.destination; v.etaTs = arrival ? arrival.ts : Infinity;
       if (isJati(v.destination)) v.band = 'queue';
       else if (knownColumn(v.destination) >= 0) v.band = 'transit';
-      else { v.band = 'external'; v.location = 'Tujuan ' + (v.destination || 'tidak tercantum'); v.externalRoute = Boolean(v.destination); v.routeLabel = v.destination; warn(v.name + ': tujuan berada di luar empat pelabuhan muat; panah diberi label tujuan sebenarnya.'); }
+      else { v.band = 'external'; v.location = 'Tujuan ' + (v.destination || 'tidak tercantum'); }
       break;
     }
     case 'TA':
-      v.status = 'ARRIVED'; row('TD ' + abbr(td && td.port), td); row('TA ' + abbr(e.port), e); place();
+      v.status = 'DROP ANCHOR'; row('TD ' + abbr(td && td.port), td); row('TA ' + abbr(e.port), e); place();
       if (v.band === 'jetty') v.band = 'anchored';
       break;
     case 'DA':
@@ -400,11 +441,16 @@ function evalVessel(v, now, warn) {
       if (v.band !== 'external') v.band = 'anchored';
       break;
     case 'CML':
-      v.status = 'LOADING'; row('CmL', e); row('ECL', future(['EST_CL','CL'])); place(); break;
+      v.status = 'LOADING'; row('CmL', e);
+      { const cl = future(['EST_CL','CL']); row(cl && cl.type === 'CL' ? 'CL' : 'ECL', cl); }
+      place(); break;
     case 'CL':
-      v.status = 'COMPLETE LOADING'; row('CmL', latest(visit,['CML'])); row('CL', e); row('ETD', future(['ETD'])); place(); break;
+      v.status = now === e.ts ? 'COMPLETE LOADING' : 'WAITING P.CLEARANCE';
+      row('CmL', latest(visit,['CML'])); row('CL', e); row('ETD', future(['ETD'])); place(); break;
     case 'CMD':
-      v.status = 'DISCHARGING'; row('CmD', e); row('ECD', future(['EST_CD','CD'])); place(); break;
+      v.status = 'DISCHARGING'; row('CmD', e);
+      { const cd = future(['EST_CD','CD']); row(cd && cd.type === 'CD' ? 'CD' : 'ECD', cd); }
+      place(); break;
     case 'CD':
       v.status = 'COMPLETE DISCHARGE'; row('CmD', latest(visit,['CMD'])); row('CD', e); row('ETD', future(['ETD'])); place(); break;
     case 'ALLFAST': {
@@ -423,14 +469,15 @@ function evalVessel(v, now, warn) {
       v.status = 'DISCHARGE STOPPED'; row('CmD', latest(visit,['CMD'])); row('Stop Disch', e); row('Est CmD', future(['EST_CMD','EST_CONTINUE_CD'])); place(); break;
     case 'SHIFT':
       v.status = 'SHIFTING'; v.shiftFrom = v.jetty; v.shiftTo = jettyIn(e.raw);
-      row('POB Shift ' + (v.shiftTo || ''), e); place(); break;
+      row('POB Shift ' + (v.shiftTo || ''), e); row('ETB', future(['ETB'])); place(); break;
     case 'POB': case 'POB_ETD': {
-      const departing = e.type === 'POB_ETD' || /unberth|\bETD\b/i.test(e.raw) || op && ['CL','CD'].includes(op.type);
-      if (!departing && /\b(?:berthing|bething)\b/i.test(e.raw)) {
+      const berthing = /\b(?:berthing|bething)\b/i.test(e.raw) && !/unberth/i.test(e.raw);
+      const departing = !berthing && (e.type === 'POB_ETD' || /unberth|\bETD\b/i.test(e.raw) || op && ['CL','CD'].includes(op.type));
+      if (berthing) {
         // Preserve the established report convention requested for POB Berthing.
         v.status = 'BERTHED'; row('TA ' + abbr(v.port), ta); row('POB', e);
       } else if (departing) {
-        v.status = /unberth/i.test(e.raw) ? 'UNBERTHING PROCESS' : op && op.type === 'CL' ? 'COMPLETE LOADING' : op && op.type === 'CD' ? 'COMPLETE DISCHARGE' : 'UNBERTHING PROCESS';
+        v.status = 'UNBERTHING PROCESS';
         row(op && op.type === 'CL' ? 'CL' : 'CD', op && ['CL','CD'].includes(op.type) ? op : null); row('POB ETD', e);
       } else {
         v.status = operation === 'loading' && op.type === 'CML' ? 'LOADING' : operation === 'discharging' && op.type === 'CMD' ? 'DISCHARGING' : 'BERTHING PROCESS';
@@ -449,13 +496,23 @@ function evalVessel(v, now, warn) {
   // the log only carries an estimate or contains a contradictory operation date.
   // This is reported evidence, not an invented TA/CmD timestamp.
   const reportedArrival = reported === 'ARRIVED' && v.status === 'SAILING' && useReport;
-  const arrivedEstimate = E.find(x => x.type === 'ETA' && x.ts <= v.reportTs && (!td || x.ts >= td.ts));
-  if (reportedArrival && arrivedEstimate) {
-    v.status = 'ARRIVED'; v.port = arrivedEstimate.port; v.rows = [];
-    row('TD ' + abbr(td && td.port), td); row('ETA ' + abbr(v.port), arrivedEstimate);
+  const arrivedEstimate = E.find(x => x.type === 'ETA' && (!td || x.ts >= td.ts));
+  if (reportedArrival) {
+    v.status = 'DROP ANCHOR'; v.port = statusPort(v.statusText) || (arrivedEstimate && arrivedEstimate.port); v.rows = [];
+    row('TD ' + abbr(td && td.port), td);
+    row((arrivedEstimate ? 'ETA ' : 'TA ') + abbr(v.port), arrivedEstimate);
     v.reportedEvidence = true; place();
     if (isJati(v.port)) v.band = 'anchored';
-    warn(v.name + ': kedatangan dikonfirmasi ringkasan laporan; jam yang tersedia masih ETA, bukan TA aktual.');
+    warn(v.name + ': kedatangan dikonfirmasi ringkasan laporan; ' + (arrivedEstimate ? 'jam yang tersedia masih ETA, bukan TA aktual.' : 'jam TA aktual tidak tersedia.'));
+  }
+  const uncertainCL = E.find(x => x.type === 'CL' && x.hh === null && x.index > e.index);
+  const clRangeStart = uncertainCL && Number.isFinite(uncertainCL.ts)
+    ? Math.floor(uncertainCL.ts / 86400000) * 86400000 + (uncertainCL.ampm === 'PM' ? 12 * 3600000 : 0) : NaN;
+  if (useReport && uncertainCL && (uncertainCL.undated || reported === 'COMPLETE LOADING' && now >= clRangeStart)) {
+    v.status = 'COMPLETE LOADING'; v.rows = []; v.reportedEvidence = true;
+    row('CmL', latest(visit,['CML'])); row('CL', uncertainCL); row('ETD', future(['ETD']));
+    place();
+    warn(v.name + ': selesai loading tercantum tanpa jam pasti; perubahan ke Waiting P. Clearance belum dapat ditentukan.');
   }
   const invalidOp = E.find(x => x.dateConflict && x.ts <= now &&
     (reported === 'DISCHARGING' ? x.type === 'CMD' : reported === 'LOADING' ? x.type === 'CML' : false));
@@ -479,6 +536,33 @@ function evalVessel(v, now, warn) {
     }
   }
   if (v.band === 'external') warn(v.name + ': ' + v.location + '; lokasi ini ditampilkan terpisah dari jetty/pelabuhan pada diagram.');
+  const orderEvent = v.status === 'LOADING' ? latest(visit,['CML']) : v.status === 'DROP ANCHOR'
+    ? latest(visit,['TA','DA']) : ['WAITING P.CLEARANCE','COMPLETE LOADING'].includes(v.status) ? latest(visit,['CL']) : e;
+  if (orderEvent && orderEvent.hh !== null && Number.isFinite(orderEvent.ts) && !v.reportedEvidence) v.orderTs = orderEvent.ts;
+  completeVesselRows(v);
+}
+
+// Select relevant placeholders without manufacturing facts or borrowing an old visit.
+function completeVesselRows(v) {
+  const defaults = {
+    'LOADING':['CmL','ECL'],
+    'COMPLETE LOADING':['CmL','CL','ETD'],
+    'WAITING P.CLEARANCE':['CL','ETD'],
+    'DISCHARGING':['CmD','ECD'],
+    'COMPLETE DISCHARGE':['CmD','CD','ETD'],
+    'DISCHARGE STOPPED':['Stop Disch','Est CmD'],
+    'LOADING STOPPED':['Stop Loading','Est CmL'],
+    'SAILING':['TD','ETA ' + abbr(v.destination)],
+    'DROP ANCHOR':['TA ' + abbr(v.port),'ETB'],
+    'SHIFTING':['POB Shift ' + (v.shiftTo || ''),'ETB'],
+    'BERTHED':['TA ' + abbr(v.port),'TB'],
+    'BERTHING PROCESS':['TA ' + abbr(v.port),'TB'],
+    'UNBERTHING PROCESS':['Cast Off','ETD']
+  };
+  const labels = defaults[v.status] || ['TA ' + abbr(v.port),'ETD'];
+  for (const label of labels) if (v.rows.length < 2 && !v.rows.some(r => r.label === label)) v.rows.push({label,ev:null});
+  while (v.rows.length < 2) v.rows.push({label:'ETD',ev:null});
+  v.rows = v.rows.slice(0,3);
 }
 </script>
 <script>
@@ -528,16 +612,30 @@ function layout(vessels, warn) {
   };
   const clampX = (v, x) => Math.min(W - 14 - BW, Math.max(x, v.stripW + 15));
   const live = vessels.filter(v => v.band !== 'skip');
-  live.filter(v => v.band === 'external').forEach(v => {
-    const c = knownColumn(v.port) >= 0 ? knownColumn(v.port) : 3;
-    const lane = v.externalRoute ? 0 : c;
-    v.x = clampX(v, portX(v, lane)); v.y = (v.externalRoute ? 800 : 850) + take('external' + lane) * (Math.max(v.h, 118) + 70);
+  // External ships form a bottom-right stack. Overflow wraps into the next
+  // column to the left; no independent port label or external arrow is drawn.
+  let externalX = W - 14 - BW, externalBottom = 1407;
+  const external = live.filter(v => v.band === 'external');
+  external.slice().reverse().forEach(v => {
+    const height = Math.max(v.h, 118);
+    if (externalBottom - height < 366) { externalX -= cellW; externalBottom = 1407; }
+    v.x = clampX(v, externalX); v.y = externalBottom - height;
+    externalBottom = v.y - 24;
   });
-  // atas: sedang di pelabuhan muat
-  live.filter(v => v.band === 'top').forEach(v => {
-    const c = colOf(v.port, warn);
-    v.x = portX(v, c); v.y = 375 + take('top' + c) * 150;
-  });
+  // Treat arrivals at loading ports and active loading as one ordered group.
+  const portGroup = v => v.band === 'top' || v.band === 'anchored' && v.anchorZone === 'port';
+  const portOrder = {LOADING:0, 'DROP ANCHOR':1, 'WAITING P.CLEARANCE':2};
+  const comparePort = (a,b) => (Number.isFinite(a.orderTs) ? a.orderTs : Infinity) -
+    (Number.isFinite(b.orderTs) ? b.orderTs : Infinity) ||
+    (portOrder[a.status] === undefined ? 3 : portOrder[a.status]) -
+    (portOrder[b.status] === undefined ? 3 : portOrder[b.status]);
+  for (let c = 0; c < COLN.length; c++) {
+    let y = 375;
+    live.filter(v => portGroup(v) && knownColumn(v.port) === c).sort(comparePort).forEach(v => {
+      v.x = portX(v, c); v.y = y;
+      y += Math.max(v.h, 118) + 24;
+    });
+  }
   // perjalanan menuju pelabuhan muat
   const transit = live.filter(v => v.band === 'transit').sort((a, b) => a.etaTs - b.etaTs);
   const routeX = Object.create(null);
@@ -566,8 +664,8 @@ function layout(vessels, warn) {
     const j = (v.jetty && JX[v.jetty] !== undefined) ? v.jetty : '3-4';
     v.x = clampX(v, JX[j]); v.y = 1258 - take('j' + j) * 165;
   });
-  // Anchored ships sit just behind an active vessel at the same destination.
-  // They have their own band so route arrows are never attached to them.
+  // Jetty anchoring retains its existing placement. Loading-port anchoring
+  // already belongs to the chronological port group above.
   live.filter(v => v.band === 'anchored').forEach(v => {
     const maxY = Math.max(366, 1407 - Math.max(v.h, 118));
     if (v.anchorZone === 'jetty') {
@@ -577,14 +675,6 @@ function layout(vessels, warn) {
         .sort((a, b) => b.y - a.y)[0];
       if (active) { v.x = active.x; v.y = active.y - Math.max(v.h, 118) - 70; }
       else { v.x = clampX(v, JX[v.anchorJetty]); v.y = Math.min(maxY, 1258 - take('anchor-jetty' + v.anchorJetty) * 165); }
-    } else {
-      const c = colOf(v.anchorPort, warn);
-      const active = live.filter(t => t !== v && t.band === 'top' &&
-        colOf(t.port, null) === c && t.status === 'LOADING' &&
-        t.y + Math.max(t.h, 118) + 8 <= maxY)
-        .sort((a, b) => b.y - a.y)[0];
-      if (active) { v.x = active.x; v.y = active.y - Math.max(v.h, 118) - 70; }
-      else { v.x = portX(v, c); v.y = Math.min(maxY, 375 + take('anchor-port' + c) * (Math.max(v.h, 118) + 24)); }
     }
   });
   // Prevent the full ship + name strip + status panel from overlapping other vessels.
@@ -603,15 +693,17 @@ function layout(vessels, warn) {
              b.top < q.bottom + 18 && b.bottom + 18 > q.top;
     });
   };
-  const priority = {jetty:0, top:1, anchored:2, external:3, transit:4, queue:5};
-  live.slice().sort((a,b) => priority[a.band] - priority[b.band] || a.y - b.y).forEach(v => {
+  const priority = v => v.band === 'external' ? 0 : v.band === 'jetty' ? 1 : portGroup(v) ? 2 : v.band === 'anchored' ? 3 : v.band === 'transit' ? 4 : 5;
+  const portBottom = {};
+  live.slice().sort((a,b) => priority(a) - priority(b) || (portGroup(a) && portGroup(b) ? knownColumn(a.port) - knownColumn(b.port) || comparePort(a,b) : a.y - b.y)).forEach(v => {
     const originalY = v.y;
-    const minY = 366;
-    const maxY = Math.max(minY, 1407 - Math.max(v.h, 118));
+    const c = knownColumn(v.port);
+    const minY = portGroup(v) ? Math.max(366, portBottom[c] || 366) : 366;
+    const maxY = Math.max(366, 1407 - Math.max(v.h, 118));
     const candidates = [];
     for (let d = 0; d <= 1100; d += 12) {
-      if (originalY + d <= maxY) candidates.push(originalY + d);
-      if (d && originalY - d >= minY) candidates.push(originalY - d);
+      if (originalY + d >= minY && originalY + d <= maxY) candidates.push(originalY + d);
+      if (!portGroup(v) && d && originalY - d >= minY && originalY - d <= maxY) candidates.push(originalY - d);
     }
     v.y = candidates.find(y => !collides(v, y));
     if (v.y === undefined) {
@@ -620,6 +712,7 @@ function layout(vessels, warn) {
     }
     if (v.y + Math.max(v.h, 118) > 1407) warn(v.name + ': informasi terlalu panjang untuk tinggi diagram; periksa hasil gambar.');
     placed.push(v);
+    if (portGroup(v)) portBottom[c] = v.y + Math.max(v.h,118) + 24;
   });
   q.sort((a,b) => a.y - b.y);
   return {queue: q, live};
@@ -757,15 +850,19 @@ function generate(text, overrideTime) {
   const warnings = [], warn = m => { if (!warnings.includes(m)) warnings.push(m); };
   const {report, vessels} = parseReport(text, warnings);
   if (!vessels.length) warnings.push('Tidak ada kapal terbaca. Pastikan baris kapal berbentuk: MV NAMA KAPAL (EBP A7-21 Laycan ...).');
-  let tm = pad(report.hh) + ':' + pad(report.mm);
+  let tm = report.hh === null ? '—' : pad(report.hh) + ':' + pad(report.mm);
   let o = (overrideTime || '').trim().match(/^(\d{1,2})[:.](\d{2})$/);
   if (o && (+o[1] > 23 || +o[2] > 59)) o = null;
   if ((overrideTime || '').trim() && !o) warn('Jam pilihan tidak valid; memakai jam laporan.');
   if (o) tm = pad(+o[1]) + ':' + o[2];
-  const now = Date.UTC(report.y, report.m, report.d, o ? +o[1] : report.hh, o ? +o[2] : report.mm);
+  const validDate = report.y !== null && report.m !== null && report.d !== null;
+  const now = validDate && (o || report.hh !== null)
+    ? Date.UTC(report.y, report.m, report.d, o ? +o[1] : report.hh, o ? +o[2] : report.mm) : NaN;
+  if (validDate && o && report.hh === null) vessels.forEach(v => { v.reportTs = now; });
   vessels.forEach(v => evalVessel(v, now, warn));
   const lay = layout(vessels, warn);
-  const stamp = pad(report.d) + ord(report.d) + ' ' + MONTH_EN[report.m] + ' ' + report.y + ' ' + tm + ' LT';
+  const stamp = validDate ? pad(report.d) + ord(report.d) + ' ' + MONTH_EN[report.m] + ' ' + report.y + ' ' + tm + ' LT'
+    : 'Snapshot laporan belum tersedia';
   // panah antrean mengikuti jetty tujuan masing-masing
   let arrows = '';
   lay.live.filter(v => v.band === 'transit').forEach(v => {
@@ -793,12 +890,6 @@ function generate(text, overrideTime) {
       else arrows += routeArrow(sx, sy, sx, 1395, col, lay.live, [v]);
     });
   });
-    lay.live.filter(v => v.externalRoute).forEach(v => {
-    const sx = v.x + 100, targetY = 680;
-    arrows += routeArrow(sx, v.y - 10, sx, targetY, v.color, lay.live, [v]);
-    const fs = Math.min(21, 21 * 280 / Math.max(measure(v.routeLabel,21,700),1));
-    arrows += `<text x="${sx}" y="${targetY - 12}" font-size="${fs}" font-weight="700" text-anchor="middle" fill="#fff">${esc(v.routeLabel)}</text>`;
-  });
   lay.live.filter(v => v.status === 'SHIFTING' && v.shiftTo && v.shiftFrom).forEach(v => {
     const fromX = v.x + 100, toX = JX[v.shiftTo] + 100, y = Math.min(1384,v.y + Math.max(v.h,118) + 25);
     const dir = Math.sign(toX-fromX);
@@ -824,7 +915,8 @@ function exportPng(res, onError) {
       c.toBlob(b => {
         const a = document.createElement('a');
         const r = res.report;
-        a.download = 'Vessel_Position_' + r.y + '-' + pad(r.m + 1) + '-' + pad(r.d) + '.png';
+        a.download = r.y === null ? 'Vessel_Position_snapshot-tidak-tersedia.png'
+          : 'Vessel_Position_' + r.y + '-' + pad(r.m + 1) + '-' + pad(r.d) + '.png';
         if (!b) { onError('PNG gagal dibuat.'); return; }
         const pngUrl = URL.createObjectURL(b);
         a.href = pngUrl; document.body.appendChild(a); a.click(); a.remove();
@@ -934,7 +1026,9 @@ if (typeof document !== 'undefined' && document.getElementById('txt')) {
     $('log').innerHTML = logHtml(last);
     $('shipCount').textContent = last.vessels.length;
     $('noteCount').textContent = last.warnings.length;
-    $('snapshotLabel').textContent = pad(last.report.d) + ' ' + MONTH_EN[last.report.m] + ' ' + last.report.y + ' · ' + last.stamp.match(/(\d{2}:\d{2}) LT$/)[1];
+    const snapshotClock = last.stamp.match(/(\d{2}:\d{2}) LT$/);
+    $('snapshotLabel').textContent = last.report.y === null ? 'Belum tersedia'
+      : pad(last.report.d) + ' ' + MONTH_EN[last.report.m] + ' ' + last.report.y + ' · ' + (snapshotClock ? snapshotClock[1] : '—');
   };
   const later = () => { clearTimeout(timer); timer = setTimeout(render, 250); };
   $('txt').value = SAMPLE;

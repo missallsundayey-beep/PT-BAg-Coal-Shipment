@@ -27,10 +27,12 @@ function colOf(port, warn) {
 }
 
 function tfmt(e) {
+  if (!e || e.day == null) return '—';
   const d = pad(e.day);
-  const t = e.ampm ? '/' + e.ampm + ' LT' : '/' + pad(e.hh) + '.' + pad(e.mm) + 'lt';
+  const t = e.ampm ? '/' + e.ampm + ' LT' : e.hh == null || e.mm == null ? '/—' : '/' + pad(e.hh) + '.' + pad(e.mm) + 'lt';
   return d + '<tspan dy="-9" font-size="15">' + e.suf + '</tspan><tspan dy="9">' + t + '</tspan>';
 }
 function tplain(e) {
-  return pad(e.day) + e.suf + (e.ampm ? '/' + e.ampm + ' LT' : '/' + pad(e.hh) + '.' + pad(e.mm) + 'lt');
+  if (!e || e.day == null) return '—';
+  return pad(e.day) + e.suf + (e.ampm ? '/' + e.ampm + ' LT' : e.hh == null || e.mm == null ? '/—' : '/' + pad(e.hh) + '.' + pad(e.mm) + 'lt');
 }

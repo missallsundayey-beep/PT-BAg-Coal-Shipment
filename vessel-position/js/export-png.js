@@ -11,7 +11,8 @@ function exportPng(res, onError) {
       c.toBlob(b => {
         const a = document.createElement('a');
         const r = res.report;
-        a.download = 'Vessel_Position_' + r.y + '-' + pad(r.m + 1) + '-' + pad(r.d) + '.png';
+        a.download = r.y === null ? 'Vessel_Position_snapshot-tidak-tersedia.png'
+          : 'Vessel_Position_' + r.y + '-' + pad(r.m + 1) + '-' + pad(r.d) + '.png';
         if (!b) { onError('PNG gagal dibuat.'); return; }
         const pngUrl = URL.createObjectURL(b);
         a.href = pngUrl; document.body.appendChild(a); a.click(); a.remove();

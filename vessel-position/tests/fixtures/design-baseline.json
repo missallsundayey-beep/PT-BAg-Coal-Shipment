@@ -1,0 +1,14 @@
+{
+  "sourceCommit": "a6aa1b7711022f8559eca246311404d979dfa550",
+  "hashes": {
+    "index.html": "1a2b166cf4aec7db4f36f51246261f7162c3276fa17af9acab32846899d9435d",
+    "css/style.css": "3fc46958d161232a44ade42a6e2f901281ab98e40cc3f68e21c3bd75f1554ca4",
+    "css/responsive.css": "81d14cf84d73e46e93e998cdeaee5f6fb891a32e7a7320f4d8614c6ae29edb35",
+    "assets/images/bag-logo.png": "54a5ebf3bfbbf576152bb524b0369473a09b58737dc983a58ed464557c9e00cc",
+    "assets/images/loading-port.png": "ec8df5a457cb9153193b9995a4f1ca551b98596d9177a00aed2c6cf47aaa2735",
+    "assets/images/ocean.webp": "5f70e95b2b7e472d59f73a848f0da6a6ab5abb2d851691adc0ba29bb9343d415",
+    "assets/images/power-plant.png": "47af6292a974e482577d3f26eb8fd6d20abb30f8462b7cccd1c957b78fcaec26",
+    "assets/images/vessel.png": "a8cbb3e423b58013f20d34f06349761dbc7eca37cbe0bf5d7b8078b2f88bffce",
+    "sceneBase": "2ab5c0a5f185790924ceb3d27418d164d9f5ad75136a5028ec987bb36119cef3"
+  }
+}

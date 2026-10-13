@@ -22,7 +22,9 @@ if (typeof document !== 'undefined' && document.getElementById('txt')) {
     $('log').innerHTML = logHtml(last);
     $('shipCount').textContent = last.vessels.length;
     $('noteCount').textContent = last.warnings.length;
-    $('snapshotLabel').textContent = pad(last.report.d) + ' ' + MONTH_EN[last.report.m] + ' ' + last.report.y + ' · ' + last.stamp.match(/(\d{2}:\d{2}) LT$/)[1];
+    const snapshotClock = last.stamp.match(/(\d{2}:\d{2}) LT$/);
+    $('snapshotLabel').textContent = last.report.y === null ? 'Belum tersedia'
+      : pad(last.report.d) + ' ' + MONTH_EN[last.report.m] + ' ' + last.report.y + ' · ' + (snapshotClock ? snapshotClock[1] : '—');
   };
   const later = () => { clearTimeout(timer); timer = setTimeout(render, 250); };
   $('txt').value = SAMPLE;

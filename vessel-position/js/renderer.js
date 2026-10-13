@@ -129,15 +129,19 @@ function generate(text, overrideTime) {
   const warnings = [], warn = m => { if (!warnings.includes(m)) warnings.push(m); };
   const {report, vessels} = parseReport(text, warnings);
   if (!vessels.length) warnings.push('Tidak ada kapal terbaca. Pastikan baris kapal berbentuk: MV NAMA KAPAL (EBP A7-21 Laycan ...).');
-  let tm = pad(report.hh) + ':' + pad(report.mm);
+  let tm = report.hh === null ? '—' : pad(report.hh) + ':' + pad(report.mm);
   let o = (overrideTime || '').trim().match(/^(\d{1,2})[:.](\d{2})$/);
   if (o && (+o[1] > 23 || +o[2] > 59)) o = null;
   if ((overrideTime || '').trim() && !o) warn('Jam pilihan tidak valid; memakai jam laporan.');
   if (o) tm = pad(+o[1]) + ':' + o[2];
-  const now = Date.UTC(report.y, report.m, report.d, o ? +o[1] : report.hh, o ? +o[2] : report.mm);
+  const validDate = report.y !== null && report.m !== null && report.d !== null;
+  const now = validDate && (o || report.hh !== null)
+    ? Date.UTC(report.y, report.m, report.d, o ? +o[1] : report.hh, o ? +o[2] : report.mm) : NaN;
+  if (validDate && o && report.hh === null) vessels.forEach(v => { v.reportTs = now; });
   vessels.forEach(v => evalVessel(v, now, warn));
   const lay = layout(vessels, warn);
-  const stamp = pad(report.d) + ord(report.d) + ' ' + MONTH_EN[report.m] + ' ' + report.y + ' ' + tm + ' LT';
+  const stamp = validDate ? pad(report.d) + ord(report.d) + ' ' + MONTH_EN[report.m] + ' ' + report.y + ' ' + tm + ' LT'
+    : 'Snapshot laporan belum tersedia';
   // panah antrean mengikuti jetty tujuan masing-masing
   let arrows = '';
   lay.live.filter(v => v.band === 'transit').forEach(v => {
@@ -164,12 +168,6 @@ function generate(text, overrideTime) {
       if (next) arrows += routeArrow(sx, sy, next.x + 100, next.y - 8, col, lay.live, [v, next]);
       else arrows += routeArrow(sx, sy, sx, 1395, col, lay.live, [v]);
     });
-  });
-    lay.live.filter(v => v.externalRoute).forEach(v => {
-    const sx = v.x + 100, targetY = 680;
-    arrows += routeArrow(sx, v.y - 10, sx, targetY, v.color, lay.live, [v]);
-    const fs = Math.min(21, 21 * 280 / Math.max(measure(v.routeLabel,21,700),1));
-    arrows += `<text x="${sx}" y="${targetY - 12}" font-size="${fs}" font-weight="700" text-anchor="middle" fill="#fff">${esc(v.routeLabel)}</text>`;
   });
   lay.live.filter(v => v.status === 'SHIFTING' && v.shiftTo && v.shiftFrom).forEach(v => {
     const fromX = v.x + 100, toX = JX[v.shiftTo] + 100, y = Math.min(1384,v.y + Math.max(v.h,118) + 25);

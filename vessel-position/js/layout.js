@@ -44,16 +44,30 @@ function layout(vessels, warn) {
   };
   const clampX = (v, x) => Math.min(W - 14 - BW, Math.max(x, v.stripW + 15));
   const live = vessels.filter(v => v.band !== 'skip');
-  live.filter(v => v.band === 'external').forEach(v => {
-    const c = knownColumn(v.port) >= 0 ? knownColumn(v.port) : 3;
-    const lane = v.externalRoute ? 0 : c;
-    v.x = clampX(v, portX(v, lane)); v.y = (v.externalRoute ? 800 : 850) + take('external' + lane) * (Math.max(v.h, 118) + 70);
+  // External ships form a bottom-right stack. Overflow wraps into the next
+  // column to the left; no independent port label or external arrow is drawn.
+  let externalX = W - 14 - BW, externalBottom = 1407;
+  const external = live.filter(v => v.band === 'external');
+  external.slice().reverse().forEach(v => {
+    const height = Math.max(v.h, 118);
+    if (externalBottom - height < 366) { externalX -= cellW; externalBottom = 1407; }
+    v.x = clampX(v, externalX); v.y = externalBottom - height;
+    externalBottom = v.y - 24;
   });
-  // atas: sedang di pelabuhan muat
-  live.filter(v => v.band === 'top').forEach(v => {
-    const c = colOf(v.port, warn);
-    v.x = portX(v, c); v.y = 375 + take('top' + c) * 150;
-  });
+  // Treat arrivals at loading ports and active loading as one ordered group.
+  const portGroup = v => v.band === 'top' || v.band === 'anchored' && v.anchorZone === 'port';
+  const portOrder = {LOADING:0, 'DROP ANCHOR':1, 'WAITING P.CLEARANCE':2};
+  const comparePort = (a,b) => (Number.isFinite(a.orderTs) ? a.orderTs : Infinity) -
+    (Number.isFinite(b.orderTs) ? b.orderTs : Infinity) ||
+    (portOrder[a.status] === undefined ? 3 : portOrder[a.status]) -
+    (portOrder[b.status] === undefined ? 3 : portOrder[b.status]);
+  for (let c = 0; c < COLN.length; c++) {
+    let y = 375;
+    live.filter(v => portGroup(v) && knownColumn(v.port) === c).sort(comparePort).forEach(v => {
+      v.x = portX(v, c); v.y = y;
+      y += Math.max(v.h, 118) + 24;
+    });
+  }
   // perjalanan menuju pelabuhan muat
   const transit = live.filter(v => v.band === 'transit').sort((a, b) => a.etaTs - b.etaTs);
   const routeX = Object.create(null);
@@ -82,8 +96,8 @@ function layout(vessels, warn) {
     const j = (v.jetty && JX[v.jetty] !== undefined) ? v.jetty : '3-4';
     v.x = clampX(v, JX[j]); v.y = 1258 - take('j' + j) * 165;
   });
-  // Anchored ships sit just behind an active vessel at the same destination.
-  // They have their own band so route arrows are never attached to them.
+  // Jetty anchoring retains its existing placement. Loading-port anchoring
+  // already belongs to the chronological port group above.
   live.filter(v => v.band === 'anchored').forEach(v => {
     const maxY = Math.max(366, 1407 - Math.max(v.h, 118));
     if (v.anchorZone === 'jetty') {
@@ -93,14 +107,6 @@ function layout(vessels, warn) {
         .sort((a, b) => b.y - a.y)[0];
       if (active) { v.x = active.x; v.y = active.y - Math.max(v.h, 118) - 70; }
       else { v.x = clampX(v, JX[v.anchorJetty]); v.y = Math.min(maxY, 1258 - take('anchor-jetty' + v.anchorJetty) * 165); }
-    } else {
-      const c = colOf(v.anchorPort, warn);
-      const active = live.filter(t => t !== v && t.band === 'top' &&
-        colOf(t.port, null) === c && t.status === 'LOADING' &&
-        t.y + Math.max(t.h, 118) + 8 <= maxY)
-        .sort((a, b) => b.y - a.y)[0];
-      if (active) { v.x = active.x; v.y = active.y - Math.max(v.h, 118) - 70; }
-      else { v.x = portX(v, c); v.y = Math.min(maxY, 375 + take('anchor-port' + c) * (Math.max(v.h, 118) + 24)); }
     }
   });
   // Prevent the full ship + name strip + status panel from overlapping other vessels.
@@ -119,15 +125,17 @@ function layout(vessels, warn) {
              b.top < q.bottom + 18 && b.bottom + 18 > q.top;
     });
   };
-  const priority = {jetty:0, top:1, anchored:2, external:3, transit:4, queue:5};
-  live.slice().sort((a,b) => priority[a.band] - priority[b.band] || a.y - b.y).forEach(v => {
+  const priority = v => v.band === 'external' ? 0 : v.band === 'jetty' ? 1 : portGroup(v) ? 2 : v.band === 'anchored' ? 3 : v.band === 'transit' ? 4 : 5;
+  const portBottom = {};
+  live.slice().sort((a,b) => priority(a) - priority(b) || (portGroup(a) && portGroup(b) ? knownColumn(a.port) - knownColumn(b.port) || comparePort(a,b) : a.y - b.y)).forEach(v => {
     const originalY = v.y;
-    const minY = 366;
-    const maxY = Math.max(minY, 1407 - Math.max(v.h, 118));
+    const c = knownColumn(v.port);
+    const minY = portGroup(v) ? Math.max(366, portBottom[c] || 366) : 366;
+    const maxY = Math.max(366, 1407 - Math.max(v.h, 118));
     const candidates = [];
     for (let d = 0; d <= 1100; d += 12) {
-      if (originalY + d <= maxY) candidates.push(originalY + d);
-      if (d && originalY - d >= minY) candidates.push(originalY - d);
+      if (originalY + d >= minY && originalY + d <= maxY) candidates.push(originalY + d);
+      if (!portGroup(v) && d && originalY - d >= minY && originalY - d <= maxY) candidates.push(originalY - d);
     }
     v.y = candidates.find(y => !collides(v, y));
     if (v.y === undefined) {
@@ -136,6 +144,7 @@ function layout(vessels, warn) {
     }
     if (v.y + Math.max(v.h, 118) > 1407) warn(v.name + ': informasi terlalu panjang untuk tinggi diagram; periksa hasil gambar.');
     placed.push(v);
+    if (portGroup(v)) portBottom[c] = v.y + Math.max(v.h,118) + 24;
   });
   q.sort((a,b) => a.y - b.y);
   return {queue: q, live};
